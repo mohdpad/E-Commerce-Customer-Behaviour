@@ -1,0 +1,277 @@
+---
+title: "Final Project"
+author: "Mohammed Padghawala."
+date: "2023-11-24"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, message=FALSE ,warning=FALSE}
+library(tidyverse)
+library(MASS)
+library(MLmetrics)
+library(ggplot2)
+```
+
+# Data Cleaning and Preparation
+
+```{r}
+ECB <- read.csv("C:/Users/moham/Downloads/archive (1)/E-commerce Customer Behavior - Sheet1.csv")
+
+```
+
+```{r}
+cat("Number of observations (rows):", nrow(ECB), "\n")
+cat("Number of attributes (columns):", ncol(ECB), "\n")
+```
+> Five out of eleven attributes are qualitative variables, so first, we convert those categorical variables into factors. We obtained the same output in the regression model even before converting them to factors, as R is a smart language that can handle qualitative variables well. However, it is good practice to convert them to factors for a better understanding of the dataset. 
+
+```{r}
+ECB$Gender <- as.factor(ECB$Gender)
+ECB$City <- as.factor(ECB$City)
+ECB$Membership.Type <- as.factor(ECB$Membership.Type)
+ECB$Satisfaction.Level <- as.factor(ECB$Satisfaction.Level)
+ECB$Discount.Applied <- as.numeric(ECB$Discount.Applied)
+
+str(ECB)
+```
+
+> We can observe in this screenshot that if we don't convert them into factors, we will not know how many males and females or customers are from which cities in the dataset summary. Now, after converting them to factors, we can see the proper picture of these qualitative variables too. 
+
+```{r,echo = FALSE}
+#knitr::include_graphics("FinalProject1.png")
+```
+
+```{r}
+summary(ECB)
+```
+
+
+> The dataset contains the following columns: <br>
+1) Customer ID: Numeric identifier for each customer. <br>
+2) Gender: Gender of the customer. <br>
+3) Age: Age of the customer.<br>
+4) City: City where the customer is located. <br>
+5) Membership Type: Type of membership the customer holds. <br>
+6) Total Spend: Total amount spent by the customer. <br>
+7) Items Purchased: Number of items purchased. <br>
+8) Average Rating: Average rating given by the customer. <br>
+9) Discount Applied: Whether a discount was applied to the customer's purchases. <br>
+10) Days Since Last Purchase: Number of days since the customer's last purchase. <br>
+11) Satisfaction Level: Customer's level of satisfaction. <br>
+
+> Summary of Key Statistics <br>
+- Customer ID: Ranges from 101 to 450 (350 total customers) <br>
+- Age: Ranges from 26 to 43 years, with an average of approximately 33.6 years. <br>
+- Total Spend: Varies from $410.80 to $1520.10, with an average spend of around $845.38. <br>
+- Items Purchased: Customers purchased between 7 to 21 items, averaging around 12.6 items. <br>
+- Average Rating: Ranges from 3.0 to 4.9, with an average rating of about 4.02. <br>
+- Days Since Last Purchase: Ranges from 9 to 63 days, with an average of approximately 26.6 days.
+
+```{r}
+missing_values <- sapply(ECB, function(x) sum(is.na(x)))
+missing_values
+```
+
+> There are no missing values in any of the columns in this dataset.
+
+# Exploratory data analysis
+
+```{r}
+ggplot(ECB, aes(x = Age)) + 
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Histogram of Customer Ages", x = "Age", y = "No. of Customers") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+> 1) Age Range: The histogram shows customer ages ranging from around 25 to a bit over 40 years. This suggests that the dataset does not include younger teenagers or older adults beyond this range, or possibly that such age groups are not frequent customers. <br>
+
+> 2) Most Common Age Group: There is a peak in frequency at around the age of 30. This indicates that customers around 30 years old are the most common within this e-commerce platform's dataset.
+
+> 3) Symmetry: The distribution does not appear to be symmetric.
+
+> 4) Business perspective: The distribution of customer ages is concentrated around the early 30s, with a peak at age 31. Marketing strategies may benefit from focusing on the age demographics most represented in the histogram.
+
+
+```{r}
+ggplot(ECB, aes(x = Membership.Type, y = Total.Spend, fill = Membership.Type)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Total Spend by Membership Type", x = "Membership Type", y = "Total Spend") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+> The boxplot displays the distribution of 'Total Spend' for different 'Membership Type' categories, which appear to be 'Bronze', 'Gold', and 'Silver'.
+
+> 1) Spread: <br>
+- 'Gold' members tend to spend the most, with a median spend significantly higher than both 'Silver' and 'Bronze' members. <br>
+- 'Silver' members have a median spend that is lower than 'Gold' but higher than 'Bronze'. <br>
+- 'Bronze' members spend the least, with the lowest median spend of the three groups.
+
+> 2) Variability: <br>
+- The 'Gold' membership boxplot shows a larger interquartile range (IQR) compared to the 'Bronze' and 'Silver', indicating more variability in spending within the 'Gold' membership.<br>
+- The 'Silver' membership shows a smaller IQR than 'Gold', suggesting less variability in spending among 'Silver' members. <br>
+- The 'Bronze' membership has the smallest IQR, indicating the least variability in spending among its members.
+
+> 3) Outliers: <br>
+There are no visible outliers in theese categories, suggesting that spends are relatively consistent within these IQRs.
+
+> 4) Comparisons: <br>
+- The difference in median spend between 'Gold' and the other two types suggests that 'Gold' members are likely a more lucrative segment for the e-commerce business. <br>
+- Business strategies could include targeting Gold members with premium offers and incentivizing Silver and Bronze members to upgrade.
+
+
+```{r}
+ggplot(ECB, aes(x = Days.Since.Last.Purchase, fill = Satisfaction.Level)) +
+    geom_histogram(position = "identity", alpha = 0.5, binwidth = 5) +
+    scale_fill_manual(values = c("Satisfied" = "skyblue", "Neutral" = "orange", "Unsatisfied" = "purple")) +
+    theme_minimal() +
+    labs(title = "Days Since Last Purchase by Satisfaction Level", 
+         x = "Days Since Last Purchase", 
+         y = "No. of Customers") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+> Satisfied Customers (Sky Blue): This group has the highest frequency of customers with a smaller number of days since their last purchase, peaking at around 10-25 days. This indicates that customers who are satisfied with the service or product tend to make repeat purchases relatively quickly.
+
+> Neutral Customers (Orange): The distribution for neutral customers is centered around 15-30 days, with a moderate frequency. The trend suggests that while these customers are not entirely dissatisfied, they do not exhibit the same promptness in making another purchase as satisfied customers.
+
+> Unsatisfied Customers (Purple): This group has a peak later than the other two groups, around 40-60 days since the last purchase. The spread of the distribution is also wider, indicating that unsatisfied customers are the least consistent in their purchasing patterns and take longer to return for subsequent purchases.
+
+> Potential Business Actions : Targeted Interventions- The data could inform targeted interventions to increase purchase frequency. For satisfied customers, reinforcing positive behavior with loyalty programs could be effective. For neutral customers, promotional offers or feedback requests might stimulate more frequent engagement. For unsatisfied customers, addressing their concerns and improving their experience is crucial.
+
+# Hypothesis Test
+
+> Null Hypothesis (H0): The average number of days since the last purchase for satisfied customers is equal to that of unsatisfied customers. In other words, customer satisfaction does not affect the frequency of purchases. <br>
+Alternative Hypothesis (H1): The average number of days since the last purchase for satisfied customers is not equal to that of unsatisfied customers, indicating that customer satisfaction does affect the frequency of purchases.
+
+```{r}
+data_satisfied <- ECB[ECB$Satisfaction.Level == "Satisfied", "Days.Since.Last.Purchase"]
+data_unsatisfied <- ECB[ECB$Satisfaction.Level == "Unsatisfied", "Days.Since.Last.Purchase"]
+
+t_test_result <- t.test(data_satisfied, data_unsatisfied, alternative = "two.sided", var.equal = TRUE)
+
+print(t_test_result)
+
+```
+> t-value: -25.251 : The negative t-value indicates that the mean of the satisfied customers is less than the mean of the unsatisfied customers. This suggests that satisfied customers may make repeat purchases sooner than unsatisfied customers. 
+
+> p-value: < 2.2e-16 : The p-value is extremely small (less than the standard alpha level of 0.05), which provides very strong evidence against the null hypothesis. It suggests that the observed difference in means is highly unlikely to have occurred by random chance. 
+
+> 95% Confidence Interval: [-27.05688, -23.14087] : This interval does not contain zero, which further indicates that the difference in means is statistically significant. It provides a range of plausible values for the true mean difference between the two groups. 
+
+> Sample Estimates:<br>
+Mean of x (satisfied customers): 17.69600 days<br>
+Mean of y (unsatisfied customers): 42.79487 days
+
+> Conclusion from the Test : <br>
+The results of the t-test lead us to reject the null hypothesis in favor of the alternative hypothesis. This means there is statistically significant evidence to suggest that the number of days since the last purchase is different between satisfied and unsatisfied customers, with satisfied customers making repeat purchases in fewer days on average than unsatisfied customers.
+
+> Business Implications: <br>
+The business should prioritize customer satisfaction strategies since they have a significant impact on the frequency of purchases. <br>
+Understanding and addressing the factors contributing to customer dissatisfaction can potentially lead to increased purchase frequency and customer retention. <br>
+The results could justify investments in customer service improvement, user experience enhancements, or satisfaction surveys to keep customers engaged and satisfied.
+
+
+```{r}
+var.test(data_satisfied, data_unsatisfied)
+
+```
+
+> In previous chunk "var.equal = TRUE indicates the assumption that both groups have the same variance". So here we conduct the F test to ensure that variances are equal. An F-value close to 1 suggests that the variances are similar.
+
+# Linear regression model
+
+> Split the E-commerce customer behavior dataset data set into two parts ECBTraining and ECBTest.
+ 
+```{r}
+set.seed(100)
+EB <- sample(2, nrow(ECB), replace=TRUE, prob=c(0.8, 0.2))
+ECBTraining <- ECB[EB == 1, ]
+ECBTest <- ECB[EB == 2, ]
+```
+
+> Here the dataset is randomly split into training (80%) and testing (20%) sets using the sample function. This is to ensure that the model can be trained on one subset of data and tested on a separate subset for validation purposes. First we execute code "set.seed(100)" just to ensures that the random process of splitting the data can be replicated for consistency in results.
+
+### Forward Stepwise Selection
+
+```{r}
+
+null_model <- lm(Total.Spend ~ 1, data = ECBTraining[,2:11])
+
+full_model <- lm(Total.Spend ~ .,data = ECBTraining[,2:11])
+
+```
+
+> First we create the "null model." This model assumes that the total amount spent can be predicted by intercept only (no predictors), irrespective of any other variables. It serves as a baseline, providing a comparison point for more complex models. 
+
+> Then we build full model with all available predictors included except cutomer ID as it is a unique code for each customer. It shouldn't help predict how much a customer will spend. Adding Customer.ID as a predictor in models can cause issues. And include rest of the variables as we they think might affect the total amount spent.
+
+> Stepwise forward selection process starting from the null model, considering predictors specified in the full model. The stepAIC function chooses the best model by minimizing the AIC value. At each step, the AIC value is reported, with lower values indicating a potentially better model 
+
+```{r}
+forward_model <- stepAIC(null_model, direction = "forward", scope = formula(full_model))
+```
+
+> At each step, the AIC value is reported, with lower values indicating a potentially better model. 
+
+> Next we obtain Analysis of Deviance Table by calling anova on the forward model. This summary gives a concise overview of the model building process and the incremental contribution of each variable added to the model.
+
+```{r}
+forward_model$anova
+```
+
+> A summary of the forward model is provides detailed output for the coefficients of the final model, including estimates, standard errors, t-values, and p-values.
+
+```{r}
+summary(forward_model)
+```
+
+>  The final model suggests that all included cities, 'Items.Purchased', and 'Days.Since.Last.Purchase' are significant predictors of 'Total.Spend'. <br>
+- The 'Age' variable is also significant, while 'Satisfaction.Level' categories are not significant at the 0.05 level. <br>
+- The R-squared value is very high and close to 1 that suggests model is a good fit and explains almost all the variability in Total.Spend.
+
+```{r}
+predictions <- predict(forward_model, newdata = ECBTest[,2:11])
+MAE(y_pred = predictions, y_true = ECBTest$Total.Spend)
+MSE(y_pred = predictions, y_true = ECBTest$Total.Spend)
+
+``` 
+
+> In this context, it is observed that the variables "city of New York" and "Houston" possess the highest t-values, signifying their high level of significance. Additionally, their very low p-values suggest a significant association with Total Spend.
+
+```{r}
+ggplot(ECB, aes(x = City, y = Total.Spend, fill = City)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Total Spend by Gender", x = "City", y = "Total Spend") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### Backward Stepwise Selection
+
+```{r}
+backward <- stepAIC (full_model, direction='backward')
+```
+
+```{r}
+backward$anova
+```
+
+```{r}
+summary(backward)
+```
+
+```{r}
+predictions_backward <-predict(backward, newdata = ECBTest[,2:11])
+MAE(y_pred = predictions_backward, y_true = ECBTest$Total.Spend)
+MSE(y_pred = predictions_backward, y_true = ECBTest$Total.Spend)
+``` 
+
+
+
